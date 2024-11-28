@@ -1,25 +1,25 @@
 require('dotenv').config();
 require('dotenv').config();
 
-require('dotenv').config();  
+require('dotenv').config();
 
 const express = require('express');
 const path = require('path');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
-const session = require('express-session');  
+const session = require('express-session');
 
 const app = express();
 const port = 3000;
 
-app.use(cors());  
+app.use(cors());
 
 // Configurando sessão
 app.use(session({
-    secret: 'secret-key',  
-    resave: false,         
-    saveUninitialized: true,  
+    secret: 'secret-key',
+    resave: false,
+    saveUninitialized: true,
     cookie: { secure: false }
 }));
 
@@ -40,10 +40,20 @@ async function createDbConnection() {
     });
 }
 
+// Testa a conexão
+connection.connect(err => {
+    if (err) {
+        console.error('Erro ao conectar ao banco de dados:', err);
+    } else {
+        console.log('Conectado ao banco de dados!');
+    }
+});
+
+
 // Conectar ao banco de dados
 async function connectToDb() {
     const connection = await createDbConnection();
-    // console.log('Conectado ao MySQL');
+    console.log('Conectado ao MySQL');
     return connection;
 }
 
@@ -71,7 +81,7 @@ app.post('/api/cadastro', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const [result] = await connection.query(
-            'INSERT INTO users (name, surname, email, password, phone) VALUES (?, ?, ?, ?, ?)', 
+            'INSERT INTO users (name, surname, email, password, phone) VALUES (?, ?, ?, ?, ?)',
             [name, surname, email, hashedPassword, phone]
         );
 
@@ -88,7 +98,7 @@ app.post('/api/cadastro', async (req, res) => {
 app.get('/api/users', async (req, res) => {
     const connection = await connectToDb();
 
-    
+
     try {
         const [rows] = await connection.query('SELECT id, name, email FROM users');
         res.json(rows);
@@ -102,7 +112,7 @@ app.get('/api/users', async (req, res) => {
 
 // Rota para servir a página do usuário
 app.get('/usuario', (req, res) => {
-    if (!req.session.userId) {  
+    if (!req.session.userId) {
         return res.redirect('/');
     }
     res.sendFile(path.join(__dirname, 'public', 'usuario.html'));
@@ -121,7 +131,7 @@ app.post('/login', async (req, res) => {
         }
 
         const user = rows[0];
-        const isPasswordValid = await bcrypt.compare(password, user.password);  
+        const isPasswordValid = await bcrypt.compare(password, user.password);
 
         if (!isPasswordValid) {
             return res.status(401).json({ message: 'Senha inválida' });
@@ -151,7 +161,7 @@ app.post('/logout', (req, res) => {
 
 // Rota para buscar as listas do usuário
 app.get('/api/listas', async (req, res) => {
-    const { userId } = req.query;  
+    const { userId } = req.query;
 
     if (!userId) {
         return res.status(400).json({ message: 'userId não fornecido' });
@@ -164,7 +174,7 @@ app.get('/api/listas', async (req, res) => {
             `SELECT listas.id_lista, listas.nome_lista, users.name
              FROM listas
              INNER JOIN users ON listas.id_usuario = users.id
-             WHERE users.id = ?`, 
+             WHERE users.id = ?`,
             [userId]
         );
 
@@ -176,11 +186,13 @@ app.get('/api/listas', async (req, res) => {
     }
 });
 
-// Inicializando o servidor
-app.listen(port, async () => {
-    const connection = await connectToDb();
-    console.log(`Servidor rodando em http://localhost:${port}`);
-});
+// // Inicializando o servidor
+// app.listen(port, async () => {
+//     const connection = await connectToDb();
+//     console.log(`Servidor rodando em http://localhost:${port}`);
+// });
+
+module.exports = app;
 
 // Rota para verificar a sessão do usuário
 app.get('/api/session', (req, res) => {
@@ -207,7 +219,7 @@ app.post('/api/listas', async (req, res) => {
 
     try {
         const [result] = await connection.query(
-            'INSERT INTO listas (nome_lista, id_usuario) VALUES (?, ?)', 
+            'INSERT INTO listas (nome_lista, id_usuario) VALUES (?, ?)',
             [nome_lista, userId]
         );
 
@@ -232,7 +244,7 @@ app.post('/api/tarefa', async (req, res) => {
 
     try {
         const [result] = await connection.query(
-            'INSERT INTO tarefas (nome_tarefa, descricao, data_inicio, data_fim, prioridade, responsavel, id_lista) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+            'INSERT INTO tarefas (nome_tarefa, descricao, data_inicio, data_fim, prioridade, responsavel, id_lista) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [nome_tarefa, descricao, data_inicio, data_fim, prioridade, responsavel, id_lista]
         );
 
@@ -257,7 +269,7 @@ app.get('/api/tarefas', async (req, res) => {
 
     try {
         const [result] = await connection.query(
-            'SELECT * FROM tarefas WHERE id_lista = ?', 
+            'SELECT * FROM tarefas WHERE id_lista = ?',
             [listId]
         );
 
