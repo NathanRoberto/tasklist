@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel do Usuário</title>
+    <link rel="stylesheet"  type="text/css" href="/styles-user.css">
+</head>
+
+<body>
+
+    <div id="page-user">
+        <div id="menu">
+            <img id="img-logo" src="image/LOGO.jpg" alt="Logo">
+            <!-- Menu do ususario -->
+            <div id="user-menu">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor"
+                    class="bi bi-person-circle" viewBox="0 0 16 16">
+                    <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0" />
+                    <path fill-rule="evenodd"
+                        d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1" />
+                </svg>
+                <h1 id="user-name">Olá, Usuário!</h1>
+            </div>
+            <!-- Formulário para adicionar lista -->
+            <div id="add-list-form">
+                <h3>Adicione sua lista...</h3>
+                <div style="width: 90%; display: flex; align-items: center; padding: 0 10px;">
+                    <input type="text" id="newListName" placeholder="Qual nome da sua lista?" required>
+                    <svg onclick="addList()" style="cursor: pointer; margin-left: 10px"
+                        xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                        class="bi bi-plus-square-fill" viewBox="0 0 16 16">
+                        <path
+                            d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm6.5 4.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3a.5.5 0 0 1 1 0" />
+                    </svg>
+                </div>
+            </div>
+            <!-- A lista e sua contagem -->
+            <div id="menu-task">
+                <div id="div-list"></div>
+                <div id="div-cont"></div>
+            </div>
+        </div>
+
+
+        <div id="main" class="container">
+            <!-- Formulário para adicionar tarefa -->
+            <div id="add-task-form" style="display: none;">
+                <div style="display: flex;">
+                    <p id="text-add-task">Adicionar Tarefa na Lista: </p>
+                    <p id="name-task" class="highlighted-1"></p>
+                </div>
+                <div class="form-add-task">
+                    <input type="text" id="taskName" placeholder="Nome da tarefa" required>
+                    <input type="date" id="taskStartDate" placeholder="Data de início">
+                    <input type="date" id="taskEndDate" placeholder="Data de fim">
+                </div>
+                <div class="form-add-task">
+                    <textarea id="taskDescription" placeholder="Descrição da tarefa" required></textarea>
+                    <select id="taskPriority" required>
+                        <option value="Baixa">Baixa</option>
+                        <option value="Média">Média</option>
+                        <option value="Alta">Alta</option>
+                    </select>
+                    <input type="text" id="taskResponsavel" placeholder="Responsável">
+                </div>
+                <div style="text-align: right;">
+                    <button onclick="addTask()">Adicionar Tarefa</button>
+                </div>
+            </div>
+            <!-- Exibição das listas do usuário -->
+            <div id="lists-container"></div>
+        </div>
+    </div>
+
+
+
+    <script>
+
+        let userId = null;
+
+        // Função para buscar dados do usuário (sessão)
+        async function fetchUserData() {
+            try {
+                const sessionResponse = await fetch('/api/session');
+                const sessionData = await sessionResponse.json();
+
+                if (!sessionData.isLoggedIn) {
+                    alert('Faça seu login')
+                    window.location.href = '/';
+                    return;
+                }
+
+                userId = sessionData.userId;
+                const userName = sessionData.userName;
+
+                displayUserName(userName);
+                loadLists(userId);
+            } catch (error) {
+                console.error('Erro ao buscar dados do usuário', error);
+            }
+        }
+
+        // Função para exibir o nome do usuário
+        function displayUserName(name) {
+            const userNameElement = document.getElementById('user-name');
+            if (userNameElement) {
+                userNameElement.innerHTML = `Olá, <span style="color:#2C3E50">${name}</span>!`;
+            }
+        }
+
+        // Função para exibir as listas do usuário**
+        function displayLists(lists) {
+            const listsContainer = document.getElementById('lists-container');
+            if (listsContainer) {
+                listsContainer.innerHTML = '';
+                lists.forEach(list => {
+                    const listItem = document.createElement('div');
+                    listItem.classList.add('list-item');
+                    listItem.textContent = list.nome_lista;
+                    listsContainer.appendChild(listItem);
+                });
+            }
+        }
+
+        // Função para adicionar uma nova lista
+        async function addList() {
+            const nome_lista = document.getElementById('newListName').value;
+            try {
+                const response = await fetch('/api/listas', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ nome_lista, userId })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    alert(data.message);
+                    loadLists(userId);
+                    window.location.reload();
+                } else {
+                    alert('Erro ao adicionar lista: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Erro ao adicionar lista:', error);
+            }
+        }
+
+        // Função para carregar as listas
+        async function loadLists(userId) {
+            const response = await fetch(`/api/listas?userId=${userId}`);
+            const lists = await response.json();
+            const listsContainer = document.getElementById('lists-container');
+            const listsDiv = document.getElementById('div-list');
+            listsContainer.innerHTML = '';
+            listsDiv.innerHTML = '';
+
+            if (lists.length === 0) {
+                listsContainer.innerHTML = '<p id="no-list">Você ainda não tem listas.</p>';
+                document.getElementById('menu-task').style.display = 'none';
+            }else{
+                lists.forEach(list => {
+                    const listItem = document.createElement('div');
+                    const divList = document.createElement('div')
+                    listItem.classList.add('list-item');
+                    listItem.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 20px">
+                            <div style="display: flex; align-items: center;">
+                                Nome da lista: 
+                                <h4 class="highlighted-1"> 
+                                    ${list.nome_lista}
+                                </h4>
+                            </div>
+                            <button style="height: 50%" onclick="showTaskForm(${list.id_lista}, '${list.nome_lista}')">+</button>
+                        </div>
+                        <div id="tasks-${list.id_lista}"></div>
+                    `;
+                    divList.innerHTML = ` 
+                        <span class="highlighted-1">${list.nome_lista}</span>
+                    `;
+                    listsContainer.appendChild(listItem);
+                    listsDiv.appendChild(divList);
+                    loadTasks(list.id_lista);
+                });
+            }
+
+        }
+
+        // Função para carregar as tarefas de uma lista
+        async function loadTasks(listId) {
+            try {
+                const response = await fetch(`/api/tarefas?listId=${listId}`);
+
+                console.log('Status da resposta:', response.status); //-
+                console.log('Texto da resposta:', response.statusText); //-
+
+                if (!response.ok) {
+                    throw new Error(`Erro ao buscar tarefas: ${response.statusText}`);
+                }
+
+                const tasks = await response.json();
+                console.log('Tarefas carregadas:', tasks); //-
+
+                const tasksContainer = document.getElementById(`tasks-${listId}`);
+                tasksContainer.innerHTML = '';
+
+                const itemContainer = document.getElementById('div-cont');
+                const taskName = document.createElement('div');
+                const listaCont = {}
+
+                tasks.forEach(task => {
+
+                    // Contagem
+                    const count = tasks.reduce((acc, curr) => {
+                        if (curr.id_lista === task.id_lista) {
+                            acc++;
+                        } return acc
+                    }, 0)
+                    listaCont[task.id_lista] = count;
+
+
+                    taskName.innerHTML = `
+                        <span>total: <span class="highlighted">${listaCont[task.id_lista]}</span></span>
+                    `;
+
+               
+                    const taskItem = document.createElement('div');
+                    taskItem.classList.add('task-item');
+                    taskItem.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; padding: 0 5%;">
+                            <div style="display: flex; align-items: center; ">
+                                <span class="priority-bubble ${task.prioridade.toLowerCase()}" title="Prioridade: ${task.prioridade.toLowerCase()} "></span>
+                                <p>Nome da tarefa: <strong class="highlighted-1">${task.nome_tarefa}</strong></p>
+                            </div>
+                            <div style="display: flex; justify-content:">
+                                <p>de <strong> ${new Date(task.data_inicio).toLocaleDateString('pt-BR')}</strong></p>
+                                <p>&nbsp;á <strong>${new Date(task.data_fim).toLocaleDateString('pt-BR')}</strong></p>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 0 5%;">
+                            <p>Descrição: <strong>${task.descricao}</strong></p>
+                            <p>Responsável: <strong>${task.responsavel}</strong></p>
+                        </div>
+                    `;
+                    itemContainer.appendChild(taskName);
+                    tasksContainer.appendChild(taskItem);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar as tarefas:', error);
+                alert('Erro ao carregar as tarefas. Verifique o console para mais detalhes.');
+            }
+        }
+
+        // Função para exibir o formulário de adicionar tarefa
+        function showTaskForm(listId, listName) {
+            const taskForm = document.getElementById('add-task-form');
+            var nameTask = document.getElementById("name-task");
+            var div = document.getElementById("main")
+
+            taskForm.style.display = 'block';
+            nameTask.textContent = listName;
+
+            const taskFormButton = taskForm.querySelector('button');
+            taskFormButton.setAttribute('onclick', `addTask(${listId})`);
+
+            document.getElementById('taskName').value = '';
+            document.getElementById('taskDescription').value = '';
+            document.getElementById('taskStartDate').value = '';
+            document.getElementById('taskEndDate').value = '';
+            document.getElementById('taskResponsavel').value = '';
+
+            div.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        // Função para adicionar uma nova tarefa
+        async function addTask(listId) {
+            const nome_tarefa = document.getElementById('taskName').value;
+            const descricao = document.getElementById('taskDescription').value;
+            const data_inicio = document.getElementById('taskStartDate').value;
+            const data_fim = document.getElementById('taskEndDate').value;
+            const prioridade = document.getElementById('taskPriority').value;
+            const responsavel = document.getElementById('taskResponsavel').value;
+
+            if (!nome_tarefa || !descricao || !listId) {
+                alert("Preencha os campos obrigatórios");
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/tarefa', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        nome_tarefa,
+                        descricao,
+                        data_inicio,
+                        data_fim,
+                        prioridade,
+                        responsavel,
+                        id_lista: listId
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    alert(data.message);
+
+                    const taskForm = document.getElementById('add-task-form');
+                    taskForm.style.display = 'none';
+
+                    document.getElementById('taskName').value = '';
+                    document.getElementById('taskDescription').value = '';
+                    document.getElementById('taskStartDate').value = '';
+                    document.getElementById('taskEndDate').value = '';
+                    document.getElementById('taskResponsavel').value = '';
+
+                    loadTasks(listId); 
+                } else {
+                    alert('Erro ao adicionar tarefa: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Erro ao adicionar tarefa:', error);
+                alert('Erro ao adicionar tarefa. Verifique o console para mais detalhes.');
+            }
+        }
+
+        // Iniciar a carga dos dados do usuário
+        fetchUserData();
+
+    </script>
+</body>
+
+</html>
