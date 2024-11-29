@@ -116,8 +116,8 @@ h3{
 }
 
 #menu-task{
-    display: flex;
-    justify-content: space-evenly;
+    /* display: flex; */
+    /* justify-content: space-evenly; */
     padding: 10px;
     margin-top: 20px;
     box-shadow: rgba(133, 29, 110, 0.15) 1.95px 1.95px 2.6px;
@@ -125,7 +125,12 @@ h3{
 
 #div-list div,
 #div-cont div{
+    text-align: start;
     margin-bottom: 10px;
+}
+
+#div-cont{
+    display: none;
 }
 
 
@@ -163,7 +168,6 @@ h3{
 }
 
 .highlighted-1{
-    font-weight: bold;
     margin-left: 10px;
     color: var(--cor-2);
 }

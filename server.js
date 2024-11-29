@@ -1,11 +1,9 @@
 require('dotenv').config();
-require('dotenv').config();
-
-require('dotenv').config();
 
 const express = require('express');
 const path = require('path');
 const mysql = require('mysql2/promise');
+// const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
 const session = require('express-session');
@@ -31,30 +29,22 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Função para criar a conexão com o banco de dados
-async function createDbConnection() {
-    return await mysql.createConnection({
-        host: process.env.DB_HOST,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME
-    });
-}
-
-// Testa a conexão
-connection.connect(err => {
-    if (err) {
-        console.error('Erro ao conectar ao banco de dados:', err);
-    } else {
-        console.log('Conectado ao banco de dados!');
-    }
-});
-
-
-// Conectar ao banco de dados
 async function connectToDb() {
-    const connection = await createDbConnection();
-    console.log('Conectado ao MySQL');
-    return connection;
+    try {
+        const connection = await mysql.createConnection({
+            host: process.env.DB_HOST,
+            user: process.env.DB_USER,
+            port: process.env.DB_PORT,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME
+        });
+
+        console.log('Conectado ao MySQL');
+        return connection;
+    } catch (err) {
+        console.error('Erro ao conectar ao banco de dados:', err);
+        throw err;
+    }
 }
 
 // Rota para servir a página de login
@@ -96,17 +86,21 @@ app.post('/api/cadastro', async (req, res) => {
 
 // Rota para retornar a lista de usuários
 app.get('/api/users', async (req, res) => {
-    const connection = await connectToDb();
-
-
+    let connection;
     try {
+        connection = await connectToDb();
+
+        // Usando a consulta corretamente
         const [rows] = await connection.query('SELECT id, name, email FROM users');
         res.json(rows);
     } catch (err) {
         console.error('Erro ao buscar usuários:', err);
-        res.status(500).json({ message: 'Erro ao buscar usuários' });
+        res.status(500).json({ message: 'Erro ao buscar usuários', error: err });
     } finally {
-        connection.end();
+        // Verificando se a conexão existe antes de tentar fechá-la
+        if (connection) {
+            await connection.end(); // Fechando a conexão de forma assíncrona
+        }
     }
 });
 
@@ -187,10 +181,10 @@ app.get('/api/listas', async (req, res) => {
 });
 
 // // Inicializando o servidor
-// app.listen(port, async () => {
-//     const connection = await connectToDb();
-//     console.log(`Servidor rodando em http://localhost:${port}`);
-// });
+app.listen(port, async () => {
+    const connection = await connectToDb();
+    console.log(`Servidor rodando em http://localhost:${port}`);
+});
 
 module.exports = app;
 
